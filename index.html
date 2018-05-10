@@ -1,0 +1,142 @@
+
+<!doctype html>
+<html>
+<head>
+    <meta charset=utf-8>
+    <title>Dice Roller</title>
+    <link rel=stylesheet href=css/ui-block.css>
+    <!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+	<!-- Optional theme -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+</head>
+<body>
+    <!-- Displays a previous RNG request (if applicable) -->
+    <div id=rng_request>
+        <div>Outcome: <span id=rng_request_number></span></div>
+        <div>Number of sides: <span id=rng_request_max></span></div>
+        <div id=rng_request_data></div>
+        <div id=rng_request_date></div>
+        <br><br><hr><br><br><br>
+    </div>
+    <div id=rng_request_pending>
+        <button id=refresh onclick="javascript:onClickRefresh()">Refresh</button>
+        <br><br><hr><br><br><br>
+    </div>
+
+    <!-- This pulls in the 'Select Wallet File' (incl Password) from Neb's library -->
+    <div class=select-wallet-file></div>
+    
+    <br><br>      
+
+    <!-- The Dapp form -->
+    Enter Number Of Sides For Your Dice: <input type=number id=new_request_max></input>
+    <button type="button" class="btn btn-secondary btn-lg" id=request_number disabled onclick="javascript:onClickRequestNumber()">Roll Dice</button>
+
+    <!-- All of these scripts are dependancies from the Nebulas Web Wallet -->
+    <script src=lib/jquery-3.3.1.min.js></script>
+    <script src=lib/nebulas.js></script>
+    <script src=js/1-localSave.js></script>
+    <script src=js/i18n.js data-depends=jquery.slim></script>
+    <script src=js/ui-block.js data-depends="bootbox blockies jquery.slim i18n.js nebulas.js"></script> 
+    
+    <!-- Front end logic for our Dapp -->
+    <script>
+        "use strict";
+
+        // Global variables used by our Dapp
+        var contract_address = "n1fwPGJBkPMwWBNYWWjq344T4u2WHQTQEmt";
+        var user_account = null;
+
+        // Gas hard coded for simplicity, ideally your app would allow for changing the gas price, etc.
+        var is_mainnet = true;
+        var nebulas_chain_id, nebulas_domain; 
+        var gas_price = 1000000;
+        var gas_limit = 200000;
+
+        if(is_mainnet) {
+            nebulas_chain_id = 1;
+            nebulas_domain = "https://mainnet.nebulas.io";
+        } else {
+            nebulas_chain_id = 1001;
+            nebulas_domain = "https://testnet.nebulas.io";
+        }
+
+        // The nebulas API, used for signing transactions, etc
+        var nebulas = require("nebulas");
+        var neb = new nebulas.Neb();
+        neb.setRequest(new nebulas.HttpRequest(nebulas_domain));
+
+        // Adds the wallet selection workflow, from the Nebulas wallet
+        uiBlock.insert({
+            selectWalletFile: [".select-wallet-file", onUnlockFile]
+        });
+
+        // Called by the Refresh button
+        function onClickRefresh() {
+            neb.api.call({
+                from: contract_address, // Using the contract here so this can be called without loggin on.
+                to: contract_address,
+                value: 0,
+                nonce: 0, // Nonce is irrelavant when read-only (there is no transaction charge)
+                gasPrice: gas_price,
+                gasLimit: gas_limit,
+                contract: {function: "getNumber", args: JSON.stringify([window.location.search.substr(1)])}
+            }).then(function (resp) {
+                var response = JSON.parse(resp.result);
+                if(response) {
+                    $("#rng_request").show();
+                    $("#rng_request_pending").hide();
+
+                    $("#rng_request_number").text(response.number);
+                    $("#rng_request_max").text(response.sides);
+                    $("#rng_request_data").text(response.data);
+                    $("#rng_request_date").text(new Date(response.date));
+                }
+            });         
+        }
+
+        // Called by the post button
+        function onClickRequestNumber() {
+            // Every transaction has a sequential ID, called 'Nonce'.  Required to sign a message (but not for reading information)
+            neb.api.getAccountState(user_account.getAddressString())
+            .then(function (resp) {
+                var nonce = parseInt(resp.nonce) + 1;
+                var gTx = new nebulas.Transaction(
+                    nebulas_chain_id,
+                    user_account,
+                    contract_address,
+                    0,
+                    nonce,
+                    gas_price,
+                    gas_limit,
+                    {function: "xSideRoll", args: JSON.stringify([$("#new_request_max").val()])}); 
+
+                gTx.signTransaction();
+                neb.api.sendRawTransaction(gTx.toProtoString())
+                .then(function (response) {
+                    window.location = location.protocol + '//' + location.host + location.pathname + '?' + response.txhash;
+                });
+            });            
+        }
+
+        // Called by the Nebulas library when the user selects their wallet file and enters the password.
+        function onUnlockFile(swf, fileJson, account, password) {
+            account.fromKey(fileJson, password); // Load account information 
+            user_account = account; // Save it in a global variable
+
+            // Enables buttons so the user may now use the Dapp
+            $("#request_number").attr("disabled", false);                
+        }
+
+        $("#rng_request").hide();
+
+        if(window.location.search) {
+            onClickRefresh();
+        } else {
+            $("#rng_request_pending").hide();
+        }
+    </script>
+</body>
+</html>
