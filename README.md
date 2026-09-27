@@ -1,40 +1,33 @@
+# Nebulas Dice Roller
 
-# web-wallet
+A historical decentralized application that generated an arbitrary-sided die roll and recorded the result on the Nebulas blockchain.
 
-Nebulas wallet for the web. Nebulas users can use it to send transactions and submit smart contracts.
+> **Status:** Historical source only. [Nebulas ended its mainnet service](https://www.nebulas.io/) in December 2024, so the original application can no longer complete live blockchain transactions.
 
-Nebulas already has a JavaScript library [neb.js](https://github.com/nebulasio/neb.js) that implements address generation, transaction signing, and submission. Web-wallet implemented using this library.
+## How it worked
 
-### Feature list
+1. The user selected the number of sides for the die.
+2. The browser loaded and unlocked a Nebulas wallet file locally.
+3. The frontend signed a transaction calling `xSideRoll` on the smart contract.
+4. The contract generated a result and stored the number of sides, result, and timestamp under the transaction hash.
+5. The frontend used that hash to retrieve and display the recorded roll.
 
-- generate nebulas address/keystore;
-- send transaction;
-- send offine transaction;
-- view address/keystore info;
-- view transaction status & info;
-- deploy/call smart contract;
-- choose nebulas network(Mainnet, Testnet etc.).
+The contract rejected attached donations, so users paid only the network gas fee.
 
-### TODO list
-- Multiple wallet address import methods.
-- Send transaction (NRC20) [send NAS has done.]
+## Important files
 
+- `diceRoller.js` — Nebulas smart contract.
+- `index.html` — original dApp interface and transaction flow.
+- `server.js` — small local static server used during development.
+- `lib/` and `js/` — bundled Nebulas wallet and browser dependencies.
 
-Thanks to @luoman for implementing a pre-version [naswallet](https://github.com/nebulasio/explorer/tree/master/nasWallet) for us.
+## Technology
 
-## Contribution
+- JavaScript
+- Nebulas smart contracts
+- Nebulas JavaScript SDK
+- HTML and Bootstrap
 
-We are very glad that you are considering to help Nebulas Team, including but not limited to source code, documents or others.
+## Historical note
 
-If you'd like to contribute, please fork, fix, commit and send a pull request for the maintainers to review and merge into the main code base. If you wish to submit more complex changes though, please check up with the core devs first on our [slack channel](http://nebulasio.herokuapp.com) to ensure those changes are in line with the general philosophy of the project and/or get some early feedback which can make both your efforts much lighter as well as our review and merge procedures quick and simple.
-
-Please refer to our [contribution guideline](https://github.com/nebulasio/wiki/blob/master/contribute.md) for more information.
-
-Thanks.
-
-## License
-
-The go-nebulas project is licensed under the [GNU Lesser General Public License Version 3.0 (“LGPL v3”)](https://www.gnu.org/licenses/lgpl-3.0.en.html).
-
-For the more information about licensing, please refer to [Licensing](https://github.com/nebulasio/wiki/blob/master/licensing.md) page..
-
+This repository is retained to show the original contract and browser integration. The included wallet utilities and network endpoints are obsolete and should not be used to create or import a current cryptocurrency wallet.
